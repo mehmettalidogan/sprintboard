@@ -1,0 +1,80 @@
+name: sprintboard
+
+# ════════════════════════════════════════════════════════════════════════════
+# SprintBoard AI — Docker Compose
+#
+# Services:
+#   api  — FastAPI application (built from local Dockerfile)
+#   db   — PostgreSQL 15 database
+#
+# Usage:
+#   cp .env.example .env      # fill in your secrets
+#   docker compose up --build
+#   # API docs: http://localhost:8000/docs
+#   # Health:   http://localhost:8000/health
+# ════════════════════════════════════════════════════════════════════════════
+
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  db:
+    image: postgres:15-alpine
+    container_name: sprintboard_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sprintboard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sprintboard_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-sprintboard_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sprintboard} -d ${POSTGRES_DB:-sprintboard_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - sprintboard_net
+
+  # ── FastAPI Application ─────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: sprintboard_api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Override the DATABASE_URL to use the Docker service name as host
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-sprintboard}:${POSTGRES_PASSWORD:-sprintboard_pass}@db:5432/${POSTGRES_DB:-sprintboard_db}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health').raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - sprintboard_net
+    volumes:
+      # Mount source code for live-reload during local development
+      # Remove this volume in a production deployment
+      - ./app:/app/app
+
+# ── Volumes ────────────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+
+# ── Networks ───────────────────────────────────────────────────────────────────
+networks:
+  sprintboard_net:
+    driver: bridge
