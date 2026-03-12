@@ -10,9 +10,9 @@ import uuid
 from datetime import date, datetime, timezone
 from typing import List
 
-from sqlalchemy import DateTime, String, Text
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
@@ -27,6 +27,13 @@ class Sprint(Base):
         primary_key=True,
         default=uuid.uuid4,
         index=True,
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        comment="Owner of this sprint analysis session",
     )
     github_url: Mapped[str] = mapped_column(
         String(512),
@@ -62,6 +69,11 @@ class Sprint(Base):
         nullable=True,
         comment="Normalised 0-100 workload balance score, set after analysis",
     )
+    total_working_days: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        comment="Working days in the sprint (weekends + holidays excluded)",
+    )
     analysis_notes: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
@@ -78,6 +90,12 @@ class Sprint(Base):
         default=lambda: datetime.now(tz=timezone.utc),
         onupdate=lambda: datetime.now(tz=timezone.utc),
         nullable=False,
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        default=None,
+        comment="Soft delete timestamp — null means active, set means deleted",
     )
 
     def __repr__(self) -> str:

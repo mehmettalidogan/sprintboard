@@ -1,7 +1,7 @@
 import requests
 from typing import Optional
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = "http://127.0.0.1:8000"
 TIMEOUT_SHORT = 5
 TIMEOUT_LONG = 90
 
@@ -12,6 +12,38 @@ def health_check() -> bool:
         return r.status_code == 200
     except Exception:
         return False
+
+
+def register_user(email: str, password: str, full_name: str = "") -> dict:
+    """POST /api/v1/auth/register — yeni hesap oluştur, token döner."""
+    payload = {"email": email, "password": password}
+    if full_name:
+        payload["full_name"] = full_name
+    r = requests.post(f"{BASE_URL}/api/v1/auth/register", json=payload, timeout=TIMEOUT_SHORT)
+    r.raise_for_status()
+    return r.json()
+
+
+def login_user(email: str, password: str) -> dict:
+    """POST /api/v1/auth/login — giriş yap, token döner."""
+    r = requests.post(
+        f"{BASE_URL}/api/v1/auth/login",
+        json={"email": email, "password": password},
+        timeout=TIMEOUT_SHORT,
+    )
+    r.raise_for_status()
+    return r.json()
+
+
+def get_me(token: str) -> dict:
+    """GET /api/v1/auth/me — token ile profil bilgisi al."""
+    r = requests.get(
+        f"{BASE_URL}/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=TIMEOUT_SHORT,
+    )
+    r.raise_for_status()
+    return r.json()
 
 
 def analyze_sprint(

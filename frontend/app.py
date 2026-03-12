@@ -17,7 +17,7 @@ from components.styles import (
     FONT_MONO,
 )
 from components.charts import score_gauge, workload_pie, member_bar, active_days_bar
-from utils.api_client import analyze_sprint, health_check
+from utils.api_client import analyze_sprint, health_check, login_user, register_user
 
 # ── Sayfa Konfigürasyonu ───────────────────────────────────────────────────────
 st.set_page_config(
@@ -34,12 +34,115 @@ if "result" not in st.session_state:
     st.session_state.result = None
 if "error" not in st.session_state:
     st.session_state.error = None
+if "token" not in st.session_state:
+    st.session_state.token = None
+if "user_email" not in st.session_state:
+    st.session_state.user_email = None
+
+# ══════════════════════════════════════════════════════════════════════════════
+# AUTH GATE — Giriş yapılmamışsa login/register ekranı göster
+# ══════════════════════════════════════════════════════════════════════════════
+if not st.session_state.token:
+    st.markdown(
+        """
+        <div style="display:flex;flex-direction:column;align-items:center;
+                    padding:3rem 1rem 1rem 1rem;text-align:center;">
+            <div style="width:64px;height:64px;
+                        background:linear-gradient(135deg,#3B82F6 0%,#06B6D4 100%);
+                        border-radius:16px;display:flex;align-items:center;
+                        justify-content:center;margin-bottom:1rem;
+                        box-shadow:0 8px 24px rgba(59,130,246,0.25);">
+                <span style="font-size:30px;">📊</span>
+            </div>
+            <h1 style="margin:0 0 0.25rem 0;font-size:1.75rem;font-weight:700;color:#0F172A;">
+                SprintBoard
+            </h1>
+            <p style="margin:0 0 2rem 0;color:#64748B;font-size:0.95rem;">
+                GitHub sprint analiz platformu
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    col_left, col_center, col_right = st.columns([1, 1.2, 1])
+    with col_center:
+        auth_tab, reg_tab = st.tabs(["Giriş Yap", "Kayıt Ol"])
+
+        # ── Giriş Formu ───────────────────────────────────────────────────────
+        with auth_tab:
+            with st.form("login_form"):
+                login_email    = st.text_input("E-posta", placeholder="ornek@mail.com")
+                login_password = st.text_input("Şifre", type="password")
+                login_submit   = st.form_submit_button("Giriş Yap", use_container_width=True)
+
+            if login_submit:
+                if not login_email or not login_password:
+                    st.error("E-posta ve şifre gerekli.")
+                else:
+                    try:
+                        data = login_user(login_email, login_password)
+                        st.session_state.token      = data["access_token"]
+                        st.session_state.user_email = login_email
+                        st.rerun()
+                    except Exception as exc:
+                        msg = str(exc)
+                        if "401" in msg:
+                            st.error("E-posta veya şifre hatalı.")
+                        elif "Connection" in msg:
+                            st.error("Backend'e bağlanılamadı. Sunucu çalışıyor mu?")
+                        else:
+                            st.error(f"Giriş başarısız: {msg}")
+
+        # ── Kayıt Formu ───────────────────────────────────────────────────────
+        with reg_tab:
+            with st.form("register_form"):
+                reg_name     = st.text_input("Ad Soyad (isteğe bağlı)", placeholder="Ali Veli")
+                reg_email    = st.text_input("E-posta", placeholder="ornek@mail.com")
+                reg_password = st.text_input("Şifre", type="password", help="En az 8 karakter")
+                reg_submit   = st.form_submit_button("Kayıt Ol", use_container_width=True)
+
+            if reg_submit:
+                if not reg_email or not reg_password:
+                    st.error("E-posta ve şifre gerekli.")
+                elif len(reg_password) < 8:
+                    st.error("Şifre en az 8 karakter olmalı.")
+                else:
+                    try:
+                        data = register_user(reg_email, reg_password, reg_name)
+                        st.session_state.token      = data["access_token"]
+                        st.session_state.user_email = reg_email
+                        st.rerun()
+                    except Exception as exc:
+                        msg = str(exc)
+                        if "409" in msg:
+                            st.error("Bu e-posta zaten kayıtlı. Giriş yapmayı dene.")
+                        elif "Connection" in msg:
+                            st.error("Backend'e bağlanılamadı. Sunucu çalışıyor mu?")
+                        else:
+                            st.error(f"Kayıt başarısız: {msg}")
+
+    st.stop()  # Auth olmadan aşağıdaki kodu çalıştırma
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SIDEBAR — Giriş Formu
 # ══════════════════════════════════════════════════════════════════════════════
 with st.sidebar:
     sidebar_logo()
+
+    # Kullanıcı bilgisi + çıkış
+    st.markdown(
+        f'<p style="font-size:0.75rem;color:#475569;margin-bottom:0.25rem;">'
+        f'Giriş: <strong>{st.session_state.user_email}</strong></p>',
+        unsafe_allow_html=True,
+    )
+    if st.button("Çıkış Yap", use_container_width=True):
+        st.session_state.token      = None
+        st.session_state.user_email = None
+        st.session_state.result     = None
+        st.rerun()
+
+    st.markdown("<hr style='margin:0.75rem 0;border-color:#E2E8F0;'>", unsafe_allow_html=True)
 
     st.markdown(
         f'<p style="font-size:0.7rem;font-weight:600;letter-spacing:0.08em;'
