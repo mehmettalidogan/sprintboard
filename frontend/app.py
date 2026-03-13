@@ -38,7 +38,9 @@ if "token" not in st.session_state:
     st.session_state.token = None
 if "user_email" not in st.session_state:
     st.session_state.user_email = None
-
+#geçici geçiş anahtarı
+#st.session_state.token = "test_anahtari"
+#st.session_state.user_email = "test@sprintboard.com"
 # ══════════════════════════════════════════════════════════════════════════════
 # AUTH GATE — Giriş yapılmamışsa login/register ekranı göster
 # ══════════════════════════════════════════════════════════════════════════════
@@ -211,13 +213,13 @@ if run_btn:
     # Girdi doğrulama
     errors = []
     if not github_url.startswith("https://github.com/"):
-        errors.append("Geçerli bir GitHub repo URL'si gir (https://github.com/...)")
+        errors.append("🔗 Geçersiz Bağlantı: Lütfen 'https://github.com/kullanici/repo' formatında geçerli bir GitHub adresi girin.")
     if end_date <= start_date:
-        errors.append("Bitiş tarihi, başlangıç tarihinden sonra olmalı")
+        errors.append("📅 Tarih Hatası: Sprint bitiş tarihi, başlangıç tarihinden daha önce veya aynı gün olamaz.")
     if (end_date - start_date).days > 90:
-        errors.append("Sprint süresi 90 günü geçemez")
+        errors.append("⏳ Süre Aşımı: Çok uzun sprintler analiz kalitesini düşürür. Lütfen en fazla 90 günlük bir aralık seçin.")
     if not members:
-        errors.append("En az bir takım üyesi gir")
+        errors.append("👥 Eksik Bilgi: Analiz yapabilmek için lütfen 'Takım Üyeleri' alanına en az bir GitHub kullanıcı adı yazın.")
 
     if errors:
         st.session_state.error = errors
@@ -232,7 +234,18 @@ if run_btn:
                     country_code=country_code,
                 )
             except Exception as exc:
-                st.session_state.error = [str(exc)]
+                error_msg = str(exc).lower()
+                # Backend'den gelen teknik hataları insan diline çeviriyoruz
+                if "502" in error_msg or "bad gateway" in error_msg:
+                    friendly_error = "🔌 Sunucu Bağlantı Hatası: Analiz sunucusu şu an yanıt vermiyor veya kapalı. Lütfen backend'in çalıştığından emin olun."
+                elif "timeout" in error_msg:
+                    friendly_error = "⏱️ Zaman Aşımı: Analiz çok uzun sürdü. Lütfen sprint tarih aralığını küçültüp tekrar deneyin."
+                elif "404" in error_msg or "not found" in error_msg:
+                    friendly_error = "🔍 Repo Bulunamadı: Girdiğiniz GitHub reposu gizli (private) olabilir veya adresi yanlış yazdınız."
+                else:
+                    friendly_error = f"⚠️ Beklenmeyen bir hata: Lütfen parametreleri kontrol edin. (Sistem: {str(exc)})"
+                
+                st.session_state.error = [friendly_error]
 
 # ══════════════════════════════════════════════════════════════════════════════
 # ANA İÇERİK
@@ -242,6 +255,7 @@ if run_btn:
 if st.session_state.error:
     for msg in st.session_state.error:
         st.error(msg)
+    st.stop()
 
 # ── Sonuç Yok → Karşılama Ekranı ──────────────────────────────────────────────
 if st.session_state.result is None and not st.session_state.error:
