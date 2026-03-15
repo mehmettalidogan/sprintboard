@@ -210,14 +210,8 @@ def metric_card(label: str, value: str, color: str = C_ACCENT, sublabel: str = "
 
 def section_header(title: str, subtitle: str = "") -> None:
     """Bölüm başlığı (h2 + açıklama satırı)."""
-    sub_html = f'<p style="margin:4px 0 0 0;color:{C_TEXT_2};font-size:0.875rem;">{subtitle}</p>' if subtitle else ""
-    st.markdown(
-        f"""<div style="margin-bottom:1.25rem">
-            <h2 style="margin:0;font-size:1.25rem;font-weight:700;color:{C_PRIMARY};">{title}</h2>
-            {sub_html}
-        </div>""",
-        unsafe_allow_html=True,
-    )
+    sub_html = f"<p style='margin:4px 0 0;color:{C_TEXT_2};font-size:0.875rem;'>{subtitle}</p>" if subtitle else ""
+    st.html(f"<div style='margin-bottom:1.25rem;'><div style='margin:0;font-size:1.25rem;font-weight:700;color:{C_PRIMARY};'>{title}</div>{sub_html}</div>")
 
 
 def badge(text: str, color: str = C_ACCENT) -> str:

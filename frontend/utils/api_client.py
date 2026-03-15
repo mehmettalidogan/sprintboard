@@ -52,8 +52,9 @@ def analyze_sprint(
     end_date: str,
     team_members: list[str],
     country_code: str = "TR",
+    token: Optional[str] = None,
 ) -> dict:
-    """POST /api/v1/sprints/analyze — tam sprint analizi."""
+    """POST /api/v1/sprints/analyze — tam sprint analizi (JWT gerektirir)."""
     payload = {
         "github_url": github_url,
         "start_date": start_date,
@@ -61,42 +62,33 @@ def analyze_sprint(
         "team_members": team_members,
         "country_code": country_code,
     }
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
     r = requests.post(
         f"{BASE_URL}/api/v1/sprints/analyze",
         json=payload,
+        headers=headers,
         timeout=TIMEOUT_LONG,
     )
     r.raise_for_status()
     return r.json()
 
 
-def analyze_github(
-    github_url: str,
-    since: Optional[str] = None,
-    until: Optional[str] = None,
-    branch: str = "main",
-) -> dict:
-    """POST /api/v1/github/analyze — ham commit verisi."""
-    payload: dict = {"github_url": github_url, "branch": branch}
-    if since:
-        payload["since"] = since
-    if until:
-        payload["until"] = until
-    r = requests.post(
-        f"{BASE_URL}/api/v1/github/analyze",
-        json=payload,
-        timeout=TIMEOUT_LONG,
-    )
-    r.raise_for_status()
-    return r.json()
-
-
-def get_commits(github_url: str, branch: str = "main") -> dict:
-    """GET /api/v1/github/commits — hızlı commit listesi."""
+def get_user_sprints(token: str) -> list[dict]:
+    """GET /api/v1/sprints/ — kullanıcının geçmiş sprint analizleri."""
     r = requests.get(
-        f"{BASE_URL}/api/v1/github/commits",
-        params={"github_url": github_url, "branch": branch},
-        timeout=TIMEOUT_LONG,
+        f"{BASE_URL}/api/v1/sprints/",
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=TIMEOUT_SHORT,
     )
     r.raise_for_status()
     return r.json()
+
+
+def delete_sprint(sprint_id: str, token: str) -> bool:
+    """DELETE /api/v1/sprints/{id} — sprint soft delete."""
+    r = requests.delete(
+        f"{BASE_URL}/api/v1/sprints/{sprint_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=TIMEOUT_SHORT,
+    )
+    return r.status_code == 200

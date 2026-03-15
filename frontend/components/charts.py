@@ -67,14 +67,20 @@ def workload_pie(member_performance: list[dict]) -> go.Figure:
     """Takım üyelerinin commit payı pasta grafiği."""
     labels = [m["github_login"] for m in member_performance]
     values = [m["total_commits"] for m in member_performance]
-    colors = [C_ACCENT, C_CYAN, C_SUCCESS, C_WARNING, "#8B5CF6", "#EC4899", "#F97316"]
+    _palette = [
+        C_ACCENT, C_CYAN, C_SUCCESS, C_WARNING,
+        "#8B5CF6", "#EC4899", "#F97316", "#14B8A6",
+        "#F43F5E", "#A78BFA", "#FBBF24", "#34D399",
+    ]
+    # Yeterli renk yoksa paleti döngüsel olarak genişlet
+    colors = [_palette[i % len(_palette)] for i in range(len(labels))]
 
     fig = go.Figure(
         go.Pie(
             labels=labels,
             values=values,
             hole=0.55,
-            marker=dict(colors=colors[: len(labels)], line=dict(color="#FFFFFF", width=2)),
+            marker=dict(colors=colors, line=dict(color="#FFFFFF", width=2)),
             textfont=dict(family=FONT_SANS, size=12),
             hovertemplate="<b>%{label}</b><br>%{value} commit — %{percent}<extra></extra>",
         )
