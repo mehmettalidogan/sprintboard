@@ -1,7 +1,7 @@
 """
-User ORM model for SprintBoard AI.
+Project ORM model for SprintBoard AI.
 
-Maps to the `users` table in PostgreSQL.
+Maps to the `projects` table in PostgreSQL.
 """
 
 from __future__ import annotations
@@ -9,17 +9,17 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, String
+from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
 
-class User(Base):
-    """Platform user — owns and manages sprint analysis sessions."""
+class Project(Base):
+    """A user-owned project that groups sprint analysis data."""
 
-    __tablename__ = "users"
+    __tablename__ = "projects"
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -27,40 +27,27 @@ class User(Base):
         default=uuid.uuid4,
         index=True,
     )
-    email: Mapped[str] = mapped_column(
+    name: Mapped[str] = mapped_column(
         String(255),
-        unique=True,
-        index=True,
         nullable=False,
-        comment="User's unique email address (used as login identifier)",
+        comment="Project name",
     )
-    full_name: Mapped[str | None] = mapped_column(
-        String(255),
+    description: Mapped[str | None] = mapped_column(
+        String,
         nullable=True,
-        comment="Display name",
+        comment="Project description",
     )
-    hashed_password: Mapped[str] = mapped_column(
-        String(255),
+    owner_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
-        comment="bcrypt hashed password — plain-text is never stored",
+        index=True,
+        comment="User who owns this project",
     )
-    is_active: Mapped[bool] = mapped_column(
-        Boolean,
-        default=True,
-        nullable=False,
-        comment="Inactive users cannot log in",
-    )
-    is_superuser: Mapped[bool] = mapped_column(
-        Boolean,
-        default=False,
-        nullable=False,
-        comment="Superusers have access to admin endpoints",
-    )
+
     # ── Relationships ──────────────────────────────────────────────────────────
-    projects: Mapped[list["Project"]] = relationship(  # type: ignore # noqa: F821
-        "Project",
-        back_populates="owner",
-        cascade="all, delete-orphan",
+    owner: Mapped["User"] = relationship(   # type: ignore # noqa: F821
+        "User", 
+        back_populates="projects"
     )
 
     # ── Timestamps ─────────────────────────────────────────────────────────────
@@ -77,4 +64,4 @@ class User(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<User id={self.id} email={self.email!r}>"
+        return f"<Project id={self.id} name={self.name!r} owner_id={self.owner_id}>"

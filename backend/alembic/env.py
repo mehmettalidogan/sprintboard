@@ -11,6 +11,7 @@ from alembic import context
 from app.database import Base
 import app.models.sprint                      # noqa: F401
 import app.models.user                        # noqa: F401
+import app.models.project                     # noqa: F401
 import app.models.sprint_member_performance   # noqa: F401
 
 # ── .env dosyasını oku ────────────────────────────────────────────────────────

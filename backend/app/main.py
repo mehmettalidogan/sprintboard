@@ -17,13 +17,14 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.router import api_router
 from app.core.config import settings
-from app.database import engine
+from app.database import engine, get_db
 from app.database import Base
 from app.schemas.common import HealthResponse
 
@@ -108,6 +109,22 @@ def create_app() -> FastAPI:
     )
     async def health_check() -> HealthResponse:
         return HealthResponse(status="ok", version=settings.VERSION)
+
+    @app.get(
+        "/db-status",
+        tags=["Health"],
+        summary="Database liveness probe",
+        description="Checks if the database is accessible and responsive.",
+    )
+    async def db_status_check(
+        db: AsyncSession = Depends(get_db)  # type: ignore # noqa: F821
+    ) -> dict[str, str | bool]:
+        try:
+            from sqlalchemy import text
+            await db.execute(text("SELECT 1"))
+            return {"success": True, "message": "Database connection is alive."}
+        except Exception as e:
+            return {"success": False, "message": f"Database error: {str(e)}"}
 
     return app
 
