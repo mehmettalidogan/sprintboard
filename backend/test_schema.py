@@ -1,5 +1,5 @@
 import os
-os.environ["GEMINI_API_KEY"] = "AIzaSyAfFIhewNizLyKcr8xdo20sBqJtlSK9BcE"
+os.environ["GEMINI_API_KEY"] = ""
 from google import genai
 from google.genai import types
 
