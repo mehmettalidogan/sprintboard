@@ -290,3 +290,52 @@ class GitHubService:
                 entry["last_commit_at"] = c.committed_at
 
         return {login: AuthorStats(**data) for login, data in agg.items()}
+
+    async def get_user_profile(self, username: str) -> str:
+        """
+        Fetch recent public events for a user and build a textual summary
+        of their typical repository interactions and push messages, which
+        will be fed to the LLM.
+        """
+        self._ensure_client()
+        try:
+            response = await self._client.get(
+                f"/users/{username}/events/public",
+                params={"per_page": 30}
+            )
+            if response.status_code == 404:
+                return f"GitHub profile for {username} was not found."
+            self._raise_for_status(response)
+            events = response.json()
+            
+            repo_counts = {}
+            commit_messages = []
+            
+            for event in events:
+                repo_name = event.get("repo", {}).get("name")
+                if repo_name:
+                    repo_counts[repo_name] = repo_counts.get(repo_name, 0) + 1
+                
+                if event.get("type") == "PushEvent":
+                    payload_commits = event.get("payload", {}).get("commits", [])
+                    for c in payload_commits:
+                        msg = c.get("message")
+                        if msg:
+                            # Use only the first line of the commit message to avoid clutter
+                            commit_messages.append(msg.split("\n")[0])
+                            
+            if not repo_counts and not commit_messages:
+                return f"User {username} has no recent public activity."
+                
+            sorted_repos = sorted(repo_counts.items(), key=lambda x: x[1], reverse=True)[:3]
+            repo_summary = ", ".join([f"{name} ({count} events)" for name, count in sorted_repos])
+            
+            commit_summary = ""
+            if commit_messages:
+                # Top 10 recent commit messages
+                commit_summary = "\nRecent commits:\n- " + "\n- ".join(commit_messages[:10])
+                
+            return f"User: {username}\nActive in repos: {repo_summary}{commit_summary}"
+            
+        except Exception as e:
+            return f"Could not fetch data for {username}: {str(e)}"

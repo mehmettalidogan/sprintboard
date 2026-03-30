@@ -93,3 +93,9 @@ async def get_analysis_service(
     from app.services.analysis_service import AnalysisService
 
     yield AnalysisService(github, holiday)
+
+async def get_ai_planner_service():
+    """Build and yield an AiPlannerService."""
+    from app.services.ai_planner_service import AiPlannerService
+    yield AiPlannerService()
+

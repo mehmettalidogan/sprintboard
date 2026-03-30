@@ -92,3 +92,31 @@ def delete_sprint(sprint_id: str, token: str) -> bool:
         timeout=TIMEOUT_SHORT,
     )
     return r.status_code == 200
+
+
+def generate_sprint_plan(
+    project_idea: str,
+    sprint_count: int,
+    team_members: list[str],
+    token: str,
+) -> dict:
+    """POST /api/v1/planner/generate — Gemini destekli sprint planlaması."""
+    payload = {
+        "project_idea": project_idea,
+        "sprint_count": sprint_count,
+        "team_members": team_members,
+    }
+    r = requests.post(
+        f"{BASE_URL}/api/v1/planner/generate",
+        json=payload,
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=TIMEOUT_LONG,
+    )
+    if not r.ok:
+        try:
+            err_detail = r.json().get("detail", r.text)
+        except Exception:
+            err_detail = r.text
+        raise Exception(f"{r.status_code} - {err_detail}")
+    return r.json()
+

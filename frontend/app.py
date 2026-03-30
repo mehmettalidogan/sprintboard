@@ -50,6 +50,7 @@ else:
 
     pg = st.navigation([
         st.Page("views/home.py",    title="Ana Sayfa"),
+        st.Page("views/planner.py", title="AI Planlayıcı"),
         st.Page("views/analyze.py", title="Yeni Analiz"),
         st.Page("views/history.py", title="Gecmis"),
     ])

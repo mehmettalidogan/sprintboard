@@ -26,6 +26,7 @@ from app.api.v1.router import api_router
 from app.core.config import settings
 from app.database import engine, get_db
 from app.database import Base
+import app.models  # noqa: F401 — register all ORM models before create_all
 from app.schemas.common import HealthResponse
 
 

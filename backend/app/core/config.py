@@ -60,6 +60,9 @@ class Settings(BaseSettings):
         description="Number of results per page for GitHub API (max 100)",
     )
 
+    # -- AI Planner Integrations --
+    GEMINI_API_KEY: str = Field(..., description="API Key for Google Gemini LLM")
+
     # ── Public Holiday API ─────────────────────────────────────────────────────
     HOLIDAY_API_BASE_URL: AnyHttpUrl = Field(
         default="https://date.nager.at/api/v3",
