@@ -23,6 +23,10 @@ class SprintCreate(BaseModel):
     and the list of team member GitHub usernames to track.
     """
 
+    project_id: uuid.UUID = Field(
+        ...,
+        description="ID of the project this sprint belongs to.",
+    )
     github_url: HttpUrl = Field(
         ...,
         description="GitHub repository URL to analyse.",
@@ -94,6 +98,7 @@ class SprintResponse(BaseModel):
     """
 
     id: uuid.UUID
+    project_id: uuid.UUID
     github_url: str
     start_date: date
     end_date: date
@@ -130,3 +135,49 @@ class SprintResponse(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# ── Update ─────────────────────────────────────────────────────────────────────
+class SprintUpdate(BaseModel):
+    """Request body for updating an existing sprint analysis session."""
+
+    github_url: HttpUrl | None = Field(
+        default=None,
+        description="GitHub repository URL to analyse.",
+    )
+    start_date: date | None = Field(
+        default=None,
+        description="Sprint start date (inclusive). Format: YYYY-MM-DD",
+    )
+    end_date: date | None = Field(
+        default=None,
+        description="Sprint end date / deadline (inclusive). Format: YYYY-MM-DD",
+    )
+    team_members: List[str] | None = Field(
+        default=None,
+        min_length=1,
+        description="GitHub usernames of team members to include in analysis.",
+    )
+    country_code: str | None = Field(
+        default=None,
+        min_length=2,
+        max_length=2,
+        description="ISO 3166-1 alpha-2 country code for public holiday calculations.",
+    )
+
+    @field_validator("country_code", mode="before")
+    @classmethod
+    def normalise_country_code(cls, value: str | None) -> str | None:
+        if value is not None:
+            return value.upper().strip()
+        return value
+
+    @model_validator(mode="after")
+    def validate_date_range(self) -> "SprintUpdate":
+        if self.start_date and self.end_date:
+            if self.start_date >= self.end_date:
+                raise ValueError("end_date must be strictly after start_date.")
+            delta = (self.end_date - self.start_date).days
+            if delta > 90:
+                raise ValueError("Sprint window cannot exceed 90 days.")
+        return self

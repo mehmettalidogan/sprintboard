@@ -49,6 +49,11 @@ class Project(Base):
         "User", 
         back_populates="projects"
     )
+    sprints: Mapped[list["Sprint"]] = relationship(  # type: ignore # noqa: F821
+        "Sprint",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
 
     # ── Timestamps ─────────────────────────────────────────────────────────────
     created_at: Mapped[datetime] = mapped_column(

@@ -35,6 +35,13 @@ class Sprint(Base):
         index=True,
         comment="Owner of this sprint analysis session",
     )
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        comment="Project this sprint belongs to",
+    )
     github_url: Mapped[str] = mapped_column(
         String(512),
         nullable=False,
@@ -60,6 +67,12 @@ class Sprint(Base):
         default="TR",
         comment="ISO 3166-1 alpha-2 country code for public holiday lookups",
     )
+    # ── Relationships ──────────────────────────────────────────────────────────
+    project: Mapped["Project"] = relationship(  # type: ignore # noqa: F821
+        "Project",
+        back_populates="sprints",
+    )
+
     # ── Computed / cached results ──────────────────────────────────────────────
     performance_score: Mapped[float | None] = mapped_column(
         nullable=True,

@@ -48,3 +48,11 @@ class UserResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# ── Update ─────────────────────────────────────────────────────────────────────
+class UserUpdate(BaseModel):
+    """Request body for updating existing user details."""
+
+    full_name: str | None = Field(default=None, description="Display name", examples=["Alice Smith"])
+    password: str | None = Field(default=None, min_length=8, description="New plain-text password")

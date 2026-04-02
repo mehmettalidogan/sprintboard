@@ -32,3 +32,11 @@ class ProjectResponse(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# ── Update ─────────────────────────────────────────────────────────────────────
+class ProjectUpdate(BaseModel):
+    """Request body for updating project details."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=255, description="Name of the project")
+    description: str | None = Field(default=None, description="Optional project description")
