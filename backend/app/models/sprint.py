@@ -72,6 +72,11 @@ class Sprint(Base):
         "Project",
         back_populates="sprints",
     )
+    tasks: Mapped[list["Task"]] = relationship(  # type: ignore # noqa: F821
+        "Task",
+        back_populates="sprint",
+        cascade="all, delete-orphan",
+    )
 
     # ── Computed / cached results ──────────────────────────────────────────────
     performance_score: Mapped[float | None] = mapped_column(

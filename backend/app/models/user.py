@@ -62,6 +62,10 @@ class User(Base):
         back_populates="owner",
         cascade="all, delete-orphan",
     )
+    tasks: Mapped[list["Task"]] = relationship(  # type: ignore # noqa: F821
+        "Task",
+        back_populates="assignee",
+    )
 
     # ── Timestamps ─────────────────────────────────────────────────────────────
     created_at: Mapped[datetime] = mapped_column(

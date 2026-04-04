@@ -27,6 +27,7 @@ bcrypt==3.2.2
 python-multipart==0.0.20    # Form data / file uploads
 python-dateutil==2.9.0       # Flexible date parsing
 pytz==2024.2                 # Timezone support
+pandas==2.2.3                # Data analysis and risk scoring
 
 # ── Development / testing ──────────────────────────────────────────────────────
 pytest==8.3.4

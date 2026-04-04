@@ -7,3 +7,5 @@ from app.models.project import Project  # noqa: F401
 from app.models.sprint import Sprint  # noqa: F401
 from app.models.sprint_member_performance import SprintMemberPerformance  # noqa: F401
 from app.models.project_plan import ProjectPlan  # noqa: F401
+from app.models.task import Task  # noqa: F401
+
