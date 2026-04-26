@@ -11,12 +11,24 @@ from app.schemas.sprint import SprintCreate, SprintResponse
 from app.schemas.common import HealthResponse
 from app.services.analysis_service import AnalysisService
 from app.services.sprint_service import SprintService
+from app.schemas.analytics import SprintProductivityReport
+from app.services.analytics_service import AnalyticsService
+from app.services.github_mock_service import GitHubMockService
+from app.services.nlp_mock_service import NLPMockService
+import uuid
 
 router = APIRouter(prefix="/sprints", tags=["Sprints"])
 
 
 def get_sprint_service(db: DbSession) -> SprintService:
     return SprintService(db)
+
+
+def get_productivity_analysis_service() -> AnalyticsService:
+    return AnalyticsService(
+        github_mock_service=GitHubMockService(),
+        nlp_mock_service=NLPMockService()
+    )
 
 
 @router.get(
@@ -100,3 +112,19 @@ async def analyze_sprint(
     await sprint_service.save_sprint(result, user_id=current_user_id)
 
     return result
+
+@router.get(
+    "/{sprint_id}/productivity-reports",
+    response_model=SprintProductivityReport,
+    status_code=status.HTTP_200_OK,
+    summary="Sprint Verimlilik Raporu",
+    description="Sprint sonu geliştirici verimlilik skorlarını (Productivity Score) Pandas kullanarak sentezler.",
+)
+async def get_sprint_productivity_report(
+    sprint_id: uuid.UUID,
+    db: DbSession,
+    current_user_id: CurrentUser,
+    analytics_service: AnalyticsService = Depends(get_productivity_analysis_service),
+) -> SprintProductivityReport:
+    report = await analytics_service.calculate_member_productivity(sprint_id, db)
+    return report

@@ -39,6 +39,11 @@ class User(Base):
         nullable=True,
         comment="Display name",
     )
+    github_username: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+        comment="GitHub username for fetching developer stats",
+    )
     hashed_password: Mapped[str] = mapped_column(
         String(255),
         nullable=False,

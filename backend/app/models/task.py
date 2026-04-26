@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, String, Date
+from sqlalchemy import DateTime, ForeignKey, String, Date, Float
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -42,6 +42,11 @@ class Task(Base):
         nullable=False,
         default="pending",
         comment="Current status: pending, in_progress, completed, delayed",
+    )
+    nlp_complexity_score: Mapped[float] = mapped_column(
+        Float,
+        default=1.0,
+        comment="NLP calculated task complexity score (1.0 to 5.0)",
     )
     deadline: Mapped[date | None] = mapped_column(
         Date,
