@@ -35,10 +35,10 @@ class Sprint(Base):
         index=True,
         comment="Owner of this sprint analysis session",
     )
-    project_id: Mapped[uuid.UUID] = mapped_column(
+    project_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("projects.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
         index=True,
         comment="Project this sprint belongs to",
     )
@@ -68,7 +68,7 @@ class Sprint(Base):
         comment="ISO 3166-1 alpha-2 country code for public holiday lookups",
     )
     # ── Relationships ──────────────────────────────────────────────────────────
-    project: Mapped["Project"] = relationship(  # type: ignore # noqa: F821
+    project: Mapped["Project | None"] = relationship(  # type: ignore # noqa: F821
         "Project",
         back_populates="sprints",
     )

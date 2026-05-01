@@ -1,11 +1,29 @@
 """
 Project service for analysis and risk calculation.
+
+Sprint 2 değişiklikleri / Sprint 2 changes:
+    - calculate_risk_score() artık saf hesaplama mantığını RiskCalculator'a
+      devreder; API sözleşmesi ve dönüş şeması değişmeden kalır.
+      calculate_risk_score() now delegates pure computation to RiskCalculator;
+      the API contract and return schema remain unchanged.
+
+    - calculate_member_risk_scores() yeni metot olarak eklendi; proje
+      görevleri üzerinden kişi bazlı risk skorları üretir.
+      calculate_member_risk_scores() added as a new method, producing
+      per-member risk scores from project tasks.
+
+    - _build_tasks_df() ve _build_sprints_df() özel yardımcıları ORM →
+      DataFrame dönüşümünü tek bir yerde toplar (DRY).
+      _build_tasks_df() and _build_sprints_df() private helpers centralise
+      ORM → DataFrame conversion in one place (DRY).
+
+    Mevcut kod değiştirilmedi; yalnızca yorum satırları ve yeni metodlar eklendi.
+    Existing code was not changed; only comments and new methods were added.
 """
 
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 from typing import List
 
 import pandas as pd
@@ -14,7 +32,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.sprint import Sprint
 from app.models.task import Task
-from app.schemas.project_analysis import ProjectRiskScore, ProjectTaskAnalysis
+from app.schemas.project_analysis import MemberRiskScore, ProjectRiskScore, ProjectTaskAnalysis
+
+# Sprint 2: Saf hesaplama motorunu içe aktar (Bağımlılık Tersine Çevirme — DIP)
+# Sprint 2: Import the pure computation engine (Dependency Inversion — DIP)
+from app.services.risk_calculator import RiskCalculator
 
 
 class ProjectService:
@@ -53,100 +75,155 @@ class ProjectService:
 
     async def calculate_risk_score(self, project_id: uuid.UUID) -> ProjectRiskScore:
         """
-        Calculate risk score using pandas based on deadline urgency, incomplete task ratio, 
-        and workload density.
+        Pandas kullanarak proje risk skorunu hesaplar.
+        Calculate project risk score using pandas.
+
+        Sprint 2: Hesaplama mantığı RiskCalculator'a devredildi.
+        Sprint 2: Computation logic delegated to RiskCalculator.
+
+        Dönüş şeması değişmedi — mevcut API sözleşmesi korunuyor (OCP).
+        Return schema unchanged — existing API contract preserved (OCP).
         """
-        query = (
-            select(Task)
-            .join(Sprint)
-            .where(Sprint.project_id == project_id)
-        )
-        result = await self.db.execute(query)
-        tasks = result.scalars().all()
+        # Görev ve sprint verilerini ORM'den DataFrame'e dönüştür (DRY yardımcılar)
+        # Convert task and sprint data from ORM to DataFrame (DRY helpers)
+        tasks = await self._fetch_project_tasks(project_id)
 
         if not tasks:
             return ProjectRiskScore(
                 project_id=project_id,
                 risk_score=0.0,
                 risk_level="Low",
-                details={"message": "No tasks found in project sprints."}
+                details={"message": "No tasks found in project sprints."},
             )
 
-        # Build Pandas DataFrame
-        data = []
-        for t in tasks:
-            data.append({
-                "id": str(t.id),
-                "status": t.status,
-                "deadline": t.deadline,
-                "assignee_id": str(t.assignee_id) if t.assignee_id else None
-            })
+        # Görevleri DataFrame'e dönüştür / Convert tasks to DataFrame
+        tasks_df = self._build_tasks_df(tasks)
 
-        df = pd.DataFrame(data)
+        # Sprint zamanlaması analizi için sprint satırlarını da al
+        # Also fetch sprint rows for sprint timing analysis
+        sprints_df = await self._build_sprints_df(project_id)
 
-        # 1. Incomplete Task Ratio (40% weight)
-        total_tasks = len(df)
-        completed_df = df[df["status"] == "completed"]
-        incomplete_df = df[df["status"] != "completed"]
-        
-        incomplete_ratio = len(incomplete_df) / total_tasks if total_tasks > 0 else 0.0
-        status_risk = incomplete_ratio * 40.0
+        # Saf hesaplama motorunu çalıştır / Run the pure computation engine
+        result = RiskCalculator().load(tasks_df, sprints_df).calculate_project_risk()
 
-        # 2. Deadline Urgency (40% weight)
-        deadline_risk_score = 0.0
-        if not incomplete_df.empty:
-            today = datetime.now(tz=timezone.utc).date()
-            
-            def calculate_urgency(dl):
-                if pd.isna(dl) or dl is None:
-                    return 0.5  # average risk if no deadline exists
-                days_left = (dl - today).days
-                if days_left <= 0:
-                    return 1.0  # max risk
-                elif days_left > 14:
-                    return 0.0  # no immediate risk
-                else:
-                    return (14 - days_left) / 14.0
-
-            urgency_series = incomplete_df["deadline"].apply(calculate_urgency)
-            deadline_risk_score = urgency_series.mean() * 40.0
-
-        # 3. Workload Density (20% weight)
-        workload_risk_score = 0.0
-        if not incomplete_df.empty:
-            assigned_df = incomplete_df.dropna(subset=["assignee_id"])
-            if not assigned_df.empty:
-                # Count incomplete tasks per user
-                user_counts = assigned_df.groupby("assignee_id").size()
-                max_tasks_for_user = user_counts.max()
-                # Consider >= 5 tasks as max risk (100% of the 20 points)
-                ratio = min(max_tasks_for_user / 5.0, 1.0)
-                workload_risk_score = ratio * 20.0
-            else:
-                # All incomplete tasks are unassigned
-                workload_risk_score = 10.0
-
-        total_risk = min(status_risk + deadline_risk_score + workload_risk_score, 100.0)
-
-        # Determine level
-        if total_risk < 30:
-            level = "Low"
-        elif total_risk < 70:
-            level = "Medium"
-        else:
-            level = "High"
+        # Sprint zamanlama risklerini ayrıntılar sözlüğüne ekle
+        # Append sprint timing risks to the details dictionary
+        timing = RiskCalculator().load(tasks_df, sprints_df).get_sprint_timing_risk()
 
         details = {
-            "incomplete_ratio_score": float(status_risk),
-            "deadline_risk_score": float(deadline_risk_score),
-            "workload_risk_score": float(workload_risk_score),
-            "total_tasks": int(total_tasks),
-            "incomplete_tasks": int(len(incomplete_df))
+            "incomplete_ratio_score": result.incomplete_ratio_score,
+            "deadline_risk_score": result.deadline_risk_score,
+            "workload_risk_score": result.workload_risk_score,
+            "total_tasks": result.total_tasks,
+            "incomplete_tasks": result.incomplete_tasks,
+            # Sprint zamanlama sözlüğü — boş olabilir
+            # Sprint timing dict — may be empty if no sprints
+            "sprint_timing": timing,
         }
 
         return ProjectRiskScore(
             project_id=project_id,
-            risk_score=float(round(total_risk, 2)),
-            risk_level=level,
-            details=details
+            risk_score=result.risk_score,
+            risk_level=result.risk_level,
+            details=details,
         )
+
+    async def calculate_member_risk_scores(
+        self, project_id: uuid.UUID
+    ) -> List[MemberRiskScore]:
+        """
+        Proje görevleri üzerinden kişi bazlı risk skorları hesaplar.
+        Calculate per-member risk scores from project tasks.
+
+        Sprint 2'de eklendi — mevcut metodları değiştirmez (OCP).
+        Added in Sprint 2 — does not modify existing methods (OCP).
+        """
+        tasks = await self._fetch_project_tasks(project_id)
+
+        if not tasks:
+            return []
+
+        tasks_df = self._build_tasks_df(tasks)
+        sprints_df = await self._build_sprints_df(project_id)
+
+        # Kişi bazlı sonuçları hesapla / Compute per-member results
+        member_results = (
+            RiskCalculator().load(tasks_df, sprints_df).calculate_member_risks()
+        )
+
+        # Pydantic şemasına dönüştür / Convert to Pydantic schema
+        return [
+            MemberRiskScore(
+                assignee_id=r.assignee_id,
+                risk_score=r.risk_score,
+                risk_level=r.risk_level,
+                assigned_tasks=r.assigned_tasks,
+                incomplete_tasks=r.incomplete_tasks,
+                overdue_tasks=r.overdue_tasks,
+                deadline_risk_score=r.deadline_risk_score,
+                workload_score=r.workload_score,
+            )
+            for r in member_results
+        ]
+
+    # ── Özel ORM yardımcıları / Private ORM helpers (DRY) ─────────────────────
+
+    async def _fetch_project_tasks(self, project_id: uuid.UUID) -> list:
+        """
+        Bir projeye ait tüm Task ORM nesnelerini veritabanından çeker.
+        Fetch all Task ORM objects belonging to a project from the database.
+
+        Bu yardımcı, task sorgusunu tek bir yerde toplar (DRY).
+        This helper centralises the task query in one place (DRY).
+        """
+        query = select(Task).join(Sprint).where(Sprint.project_id == project_id)
+        result = await self.db.execute(query)
+        return result.scalars().all()
+
+    def _build_tasks_df(self, tasks: list) -> pd.DataFrame:
+        """
+        ORM Task nesnelerini RiskCalculator'ın beklediği DataFrame'e dönüştürür.
+        Convert ORM Task objects to the DataFrame expected by RiskCalculator.
+
+        sprint_id sütunu sprint zamanlama analizi için dahil edilmiştir.
+        sprint_id column is included for sprint timing analysis.
+        """
+        return pd.DataFrame([
+            {
+                "id": str(t.id),
+                "sprint_id": str(t.sprint_id),
+                "status": t.status,
+                "deadline": t.deadline,
+                "assignee_id": str(t.assignee_id) if t.assignee_id else None,
+            }
+            for t in tasks
+        ])
+
+    async def _build_sprints_df(self, project_id: uuid.UUID) -> pd.DataFrame:
+        """
+        Bir projeye ait Sprint ORM nesnelerini RiskCalculator DataFrame'ine dönüştürür.
+        Convert Sprint ORM objects for a project to the RiskCalculator DataFrame.
+
+        Yalnızca aktif (silinmemiş) sprintler dahil edilir.
+        Only active (non-deleted) sprints are included.
+        """
+        query = (
+            select(Sprint)
+            .where(Sprint.project_id == project_id)
+            .where(Sprint.deleted_at.is_(None))
+        )
+        result = await self.db.execute(query)
+        sprints = result.scalars().all()
+
+        if not sprints:
+            return pd.DataFrame()
+
+        return pd.DataFrame([
+            {
+                "id": str(s.id),
+                "start_date": s.start_date,
+                "end_date": s.end_date,
+                "project_id": str(s.project_id),
+            }
+            for s in sprints
+        ])

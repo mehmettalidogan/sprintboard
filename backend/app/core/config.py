@@ -61,7 +61,9 @@ class Settings(BaseSettings):
     )
 
     # -- AI Planner Integrations --
-    GEMINI_API_KEY: str = Field(..., description="API Key for Google Gemini LLM")
+    # Opsiyonel — yoksa AI Planner devre dışı kalır, diğer özellikler çalışır
+    # Optional — if missing, AI Planner is disabled; all other features work
+    GEMINI_API_KEY: str = Field(default="", description="API Key for Google Gemini LLM")
 
     # ── Public Holiday API ─────────────────────────────────────────────────────
     HOLIDAY_API_BASE_URL: AnyHttpUrl = Field(

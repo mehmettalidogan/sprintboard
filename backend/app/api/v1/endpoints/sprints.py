@@ -46,6 +46,7 @@ async def list_sprints(
     return [
         SprintResponse(
             id=s.id,
+            project_id=s.project_id,
             github_url=s.github_url,
             start_date=s.start_date,
             end_date=s.end_date,

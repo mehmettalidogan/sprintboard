@@ -29,9 +29,6 @@ ENV/
 .coverage
 htmlcov/
 
-# Alembic
-alembic/versions/*.py
-
 # Logs
 *.log
 logs/

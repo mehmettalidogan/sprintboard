@@ -23,8 +23,8 @@ class SprintCreate(BaseModel):
     and the list of team member GitHub usernames to track.
     """
 
-    project_id: uuid.UUID = Field(
-        ...,
+    project_id: uuid.UUID | None = Field(
+        default=None,
         description="ID of the project this sprint belongs to.",
     )
     github_url: HttpUrl = Field(
@@ -98,7 +98,7 @@ class SprintResponse(BaseModel):
     """
 
     id: uuid.UUID
-    project_id: uuid.UUID
+    project_id: uuid.UUID | None = None
     github_url: str
     start_date: date
     end_date: date

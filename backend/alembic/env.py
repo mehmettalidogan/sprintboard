@@ -13,6 +13,8 @@ import app.models.sprint                      # noqa: F401
 import app.models.user                        # noqa: F401
 import app.models.project                     # noqa: F401
 import app.models.sprint_member_performance   # noqa: F401
+import app.models.project_plan                # noqa: F401
+import app.models.task                        # noqa: F401
 
 # ── .env dosyasını oku ────────────────────────────────────────────────────────
 try:

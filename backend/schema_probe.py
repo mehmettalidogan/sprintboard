@@ -1,5 +1,13 @@
+"""Manual Gemini schema probe.
+
+This script is intentionally not named ``test_*.py`` because it calls the
+Gemini SDK directly and is not part of the automated pytest suite.
+"""
+
 import os
+
 os.environ["GEMINI_API_KEY"] = ""
+
 from google import genai
 from google.genai import types
 
@@ -14,7 +22,7 @@ task_schema = types.Schema(
         "assignee": types.Schema(type=types.Type.STRING),
         "role_assigned": types.Schema(type=types.Type.STRING),
     },
-    required=["title", "description", "assignee", "role_assigned"]
+    required=["title", "description", "assignee", "role_assigned"],
 )
 
 try:
@@ -23,8 +31,8 @@ try:
         contents="Say hello",
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
-            response_schema=task_schema
-        )
+            response_schema=task_schema,
+        ),
     )
     print("Success:", response.text)
 except Exception as e:

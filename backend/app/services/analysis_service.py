@@ -114,6 +114,7 @@ class AnalysisService:
 
         return SprintResponse(
             id=uuid.uuid4(),
+            project_id=sprint.project_id,
             github_url=repo_url,
             start_date=sprint.start_date,
             end_date=sprint.end_date,

@@ -29,6 +29,7 @@ class SprintService:
         sprint = Sprint(
             id=result.id,
             user_id=uuid.UUID(user_id),
+            project_id=result.project_id,
             github_url=str(result.github_url),
             start_date=result.start_date,
             end_date=result.end_date,
