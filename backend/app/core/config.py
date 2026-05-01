@@ -49,6 +49,8 @@ class Settings(BaseSettings):
 
     # ── GitHub API ─────────────────────────────────────────────────────────────
     GITHUB_TOKEN: str = Field(..., description="GitHub Personal Access Token (PAT)")
+    GITHUB_CLIENT_ID: str = Field(default="", description="GitHub OAuth App Client ID")
+    GITHUB_CLIENT_SECRET: str = Field(default="", description="GitHub OAuth App Client Secret")
     GITHUB_API_BASE_URL: AnyHttpUrl = Field(
         default="https://api.github.com",
         description="Base URL for GitHub REST API",
@@ -81,8 +83,14 @@ class Settings(BaseSettings):
 
     # ── CORS ───────────────────────────────────────────────────────────────────
     BACKEND_CORS_ORIGINS: str | List[str] = Field(
-        default=["http://localhost:3000", "http://localhost:5173"],
+        default=["http://localhost:3000", "http://localhost:5173", "http://localhost:8501"],
         description="List of allowed CORS origins for the frontend",
+    )
+
+    # ── Frontend ───────────────────────────────────────────────────────────────
+    FRONTEND_URL: str = Field(
+        default="http://localhost:8501",
+        description="Streamlit Frontend URL for OAuth redirects",
     )
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
@@ -107,3 +115,5 @@ def get_settings() -> Settings:
 
 # Convenience alias — use `settings.GITHUB_TOKEN` anywhere in the codebase
 settings: Settings = get_settings()
+
+# Trigger reload

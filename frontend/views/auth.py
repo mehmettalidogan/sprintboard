@@ -158,6 +158,10 @@ with col_form:
     # ── Giriş Formu ───────────────────────────────────────────────────────────
     with login_tab:
         st.html("<div style='height:0.5rem'></div>")
+        
+        st.link_button("🐙 GitHub ile Giriş Yap", "http://localhost:8000/api/v1/auth/github/login", use_container_width=True)
+        st.html("<div style='text-align: center; margin: 0.75rem 0; color: #94A3B8; font-size: 0.85rem;'>veya e-posta ile giriş yap</div>")
+
         with st.form("login_form"):
             email    = st.text_input("E-posta", placeholder="ornek@mail.com")
             password = st.text_input("Şifre", type="password", placeholder="••••••••")

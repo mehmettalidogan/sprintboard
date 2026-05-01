@@ -72,6 +72,56 @@ class UserService:
             )
         return user
 
+    # ── Authenticate via GitHub ────────────────────────────────────────────────
+    async def authenticate_via_github(self, email: str, full_name: str | None, github_username: str) -> User:
+        """
+        Authenticate or register a user via GitHub OAuth (Upsert logic).
+        """
+        import secrets
+        import string
+
+        # 1. Check if user exists with this github_username
+        result = await self._db.execute(
+            select(User).where(User.github_username == github_username)
+        )
+        user = result.scalar_one_or_none()
+
+        if user:
+            # Login (Eski Kullanıcı)
+            if not user.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Bu hesap devre dışı bırakılmış.",
+                )
+            return user
+
+        # 2. Check if email exists (to avoid IntegrityError if they registered via email earlier)
+        existing_email_user = await self._get_by_email(email)
+        if existing_email_user:
+            # Link GitHub profile to existing account
+            existing_email_user.github_username = github_username
+            if full_name and not existing_email_user.full_name:
+                existing_email_user.full_name = full_name
+            await self._db.flush()
+            await self._db.refresh(existing_email_user)
+            return existing_email_user
+
+        # 3. Create (Yeni Kullanıcı)
+        # Generate a random secure password since hashed_password is required
+        alphabet = string.ascii_letters + string.digits + string.punctuation
+        random_password = ''.join(secrets.choice(alphabet) for i in range(16))
+
+        user = User(
+            email=email.lower().strip(),
+            full_name=full_name,
+            github_username=github_username,
+            hashed_password=hash_password(random_password),
+        )
+        self._db.add(user)
+        await self._db.flush()   # ID'yi almak için flush, commit session tarafından yapılır
+        await self._db.refresh(user)
+        return user
+
     # ── Get by ID ──────────────────────────────────────────────────────────────
     async def get_by_id(self, user_id: str) -> User:
         """

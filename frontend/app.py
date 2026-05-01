@@ -21,6 +21,12 @@ for _k, _v in _defaults.items():
     if _k not in st.session_state:
         st.session_state[_k] = _v
 
+# ── GitHub OAuth Token Capture ────────────────────────────────────────────────
+if "token" in st.query_params and "email" in st.query_params:
+    st.session_state.token = st.query_params.get("token")
+    st.session_state.user_email = st.query_params.get("email")
+    st.query_params.clear()
+
 # ══════════════════════════════════════════════════════════════════════════════
 # NAVİGASYON
 # ══════════════════════════════════════════════════════════════════════════════
