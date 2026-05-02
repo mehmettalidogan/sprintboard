@@ -38,3 +38,7 @@ logs/
 
 # macOS
 .DS_Store
+
+venv/
+
+.env

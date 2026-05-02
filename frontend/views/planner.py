@@ -1,7 +1,37 @@
+import re
 import streamlit as st
 import pandas as pd
 from utils.api_client import generate_sprint_plan
 
+def parse_github_users(input_string: str) -> list[str]:
+    """
+    Virgülle ayrılmış GitHub kullanıcı adlarını veya profil linklerini ayrıştırıp,
+    sadece temizlenmiş kullanıcı adlarını içeren bir liste döndürür.
+    """
+    if not input_string:
+        return []
+        
+    usernames = []
+    # Virgülle ayır ve baştaki/sondaki boşlukları temizle
+    raw_users = [u.strip() for u in input_string.split(',')]
+    
+    for raw_user in raw_users:
+        if not raw_user:
+            continue
+            
+        # Eğer giriş bir GitHub URL'si ise Regex ile sadece kullanıcı adını yakala
+        match = re.search(r'(?:https?://)?(?:www\.)?github\.com/([^/\s]+)', raw_user, re.IGNORECASE)
+        
+        if match:
+            # Eşleşen URL'den kullanıcı adını al
+            usernames.append(match.group(1))
+        else:
+            # Sadece kullanıcı adı girilmişse (başında @ varsa temizle, sondaki slash'leri at)
+            clean_user = raw_user.lstrip('@').rstrip('/')
+            if clean_user:
+                usernames.append(clean_user)
+                
+    return usernames
 st.title("🤖 AI Proje Planlayıcı")
 st.markdown(
     "Gemini destekli yapay zeka ile projenizi oluşturun. "
@@ -26,8 +56,8 @@ with st.form("planner_form"):
         
     with col2:
         team_members_input = st.text_input(
-            "Takım Üyeleri (GitHub Kullanıcı Adları)", 
-            placeholder="Kullanici1, Kullanici2, Kullanici3"
+            "Takım Üyeleri (GitHub Kullanıcı Adları veya Profil Linkleri)", 
+            placeholder="Örn: Kullanici1, https://github.com/Kullanici2, Kullanici3"
         )
         
     submit = st.form_submit_button("Planı Oluştur 🚀", type="primary", use_container_width=True)
@@ -36,7 +66,7 @@ if submit:
     if not project_idea or not team_members_input:
         st.error("Lütfen proje fikrini ve en az bir takım üyesini girin.")
     else:
-        members = [m.strip() for m in team_members_input.split(",") if m.strip()]
+        members = parse_github_users(team_members_input)
         if not members:
             st.error("Geçerli bir takım üyesi bulunamadı.")
         else:
