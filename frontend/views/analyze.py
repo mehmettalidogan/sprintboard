@@ -129,15 +129,21 @@ n_members  = len(r["member_performance"])
 
 col_title, col_btn = st.columns([5, 1])
 with col_title:
+    _badge_html   = badge("Tamamland\u0131", C_SUCCESS)
+    _start        = r["start_date"]
+    _end          = r["end_date"]
+    _working_days = r["total_working_days"]
+    _calısma      = "\u00e7al\u0131\u015fma g\u00fcn\u00fc"
+    _takim        = "tak\u0131m \u00fcyesi"
     st.html(
         f"<div style='display:flex;align-items:center;gap:12px;margin-bottom:0.25rem;'>"
         f"<div style='font-size:1.5rem;font-weight:700;color:#0F172A;'>{repo_short}</div>"
-        f"{badge('Tamamland\u0131', C_SUCCESS)}"
+        f"{_badge_html}"
         f"</div>"
         f"<p style='color:#64748B;font-size:0.875rem;margin:0 0 1.75rem;'>"
-        f"{r['start_date']} &rarr; {r['end_date']} &nbsp;&middot;&nbsp; "
-        f"<span style='font-family:JetBrains Mono,monospace;'>{r['total_working_days']}</span> "
-        f"\u00e7al\u0131\u015fma g\u00fcn\u00fc &nbsp;&middot;&nbsp; {n_members} tak\u0131m \u00fcyesi</p>"
+        f"{_start} &rarr; {_end} &nbsp;&middot;&nbsp; "
+        f"<span style='font-family:JetBrains Mono,monospace;'>{_working_days}</span> "
+        f"{_calısma} &nbsp;&middot;&nbsp; {n_members} {_takim}</p>"
     )
 with col_btn:
     st.html("<div style='height:1rem'></div>")

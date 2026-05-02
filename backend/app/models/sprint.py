@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime, timezone
-from typing import List
+from typing import List, Optional
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
@@ -35,7 +35,7 @@ class Sprint(Base):
         index=True,
         comment="Owner of this sprint analysis session",
     )
-    project_id: Mapped[uuid.UUID | None] = mapped_column(
+    project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=True,
@@ -79,20 +79,20 @@ class Sprint(Base):
     )
 
     # ── Computed / cached results ──────────────────────────────────────────────
-    performance_score: Mapped[float | None] = mapped_column(
+    performance_score: Mapped[Optional[float]] = mapped_column(
         nullable=True,
         comment="Normalised 0-100 performance score, set after analysis",
     )
-    workload_balance_score: Mapped[float | None] = mapped_column(
+    workload_balance_score: Mapped[Optional[float]] = mapped_column(
         nullable=True,
         comment="Normalised 0-100 workload balance score, set after analysis",
     )
-    total_working_days: Mapped[int | None] = mapped_column(
+    total_working_days: Mapped[Optional[int]] = mapped_column(
         Integer,
         nullable=True,
         comment="Working days in the sprint (weekends + holidays excluded)",
     )
-    analysis_notes: Mapped[str | None] = mapped_column(
+    analysis_notes: Mapped[Optional[str]] = mapped_column(
         Text,
         nullable=True,
         comment="Human-readable summary from the analysis engine",
@@ -109,7 +109,7 @@ class Sprint(Base):
         onupdate=lambda: datetime.now(tz=timezone.utc),
         nullable=False,
     )
-    deleted_at: Mapped[datetime | None] = mapped_column(
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
         default=None,

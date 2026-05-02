@@ -20,6 +20,23 @@ def register_user(email: str, password: str, full_name: str = "") -> dict:
     if full_name:
         payload["full_name"] = full_name
     r = requests.post(f"{BASE_URL}/api/v1/auth/register", json=payload, timeout=TIMEOUT_SHORT)
+    if r.status_code == 422:
+        # FastAPI validation hatalarını Türkçe mesaja çevir
+        try:
+            details = r.json().get("detail", [])
+            messages = []
+            for err in details if isinstance(details, list) else []:
+                field = err.get("loc", [""])[-1]
+                msg   = err.get("msg", "")
+                if "password" in str(field):
+                    messages.append(f"Şifre: {msg}")
+                elif "email" in str(field):
+                    messages.append(f"E-posta: {msg}")
+                else:
+                    messages.append(msg)
+            raise Exception(", ".join(messages) if messages else "Geçersiz form verisi.")
+        except Exception as e:
+            raise Exception(str(e)) from None
     r.raise_for_status()
     return r.json()
 

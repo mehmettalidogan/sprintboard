@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
+from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -34,12 +35,12 @@ class User(Base):
         nullable=False,
         comment="User's unique email address (used as login identifier)",
     )
-    full_name: Mapped[str | None] = mapped_column(
+    full_name: Mapped[Optional[str]] = mapped_column(
         String(255),
         nullable=True,
         comment="Display name",
     )
-    github_username: Mapped[str | None] = mapped_column(
+    github_username: Mapped[Optional[str]] = mapped_column(
         String(255),
         nullable=True,
         comment="GitHub username for fetching developer stats",

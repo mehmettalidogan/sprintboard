@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime, timezone
+from typing import Optional
 
 from sqlalchemy import DateTime, ForeignKey, String, Date, Float
 from sqlalchemy.dialects.postgresql import UUID
@@ -32,7 +33,7 @@ class Task(Base):
         nullable=False,
         comment="Task title / headline",
     )
-    description: Mapped[str | None] = mapped_column(
+    description: Mapped[Optional[str]] = mapped_column(
         String,
         nullable=True,
         comment="Task detailed description",
@@ -48,7 +49,7 @@ class Task(Base):
         default=1.0,
         comment="NLP calculated task complexity score (1.0 to 5.0)",
     )
-    deadline: Mapped[date | None] = mapped_column(
+    deadline: Mapped[Optional[date]] = mapped_column(
         Date,
         nullable=True,
         comment="Target completion date",
@@ -62,7 +63,7 @@ class Task(Base):
         index=True,
         comment="The sprint this task belongs to",
     )
-    assignee_id: Mapped[uuid.UUID | None] = mapped_column(
+    assignee_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,

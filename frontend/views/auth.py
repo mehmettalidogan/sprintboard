@@ -216,6 +216,8 @@ with col_form:
                     msg = str(exc)
                     if "409" in msg:
                         st.error("Bu e-posta zaten kayıtlı.")
+                    elif "422" in msg or "Geçersiz" in msg or "Şifre" in msg or "E-posta" in msg:
+                        st.error(f"⚠️ {msg}")
                     elif "Connection" in msg:
                         st.error("Backend'e bağlanılamadı. Sunucu çalışıyor mu?")
                     else:

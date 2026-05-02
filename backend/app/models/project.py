@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
+from typing import Optional
 
 from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -32,7 +33,7 @@ class Project(Base):
         nullable=False,
         comment="Project name",
     )
-    description: Mapped[str | None] = mapped_column(
+    description: Mapped[Optional[str]] = mapped_column(
         String,
         nullable=True,
         comment="Project description",
