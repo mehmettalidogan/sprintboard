@@ -104,10 +104,13 @@ if result is None:
                     st.rerun()
                 except Exception as exc:
                     msg = str(exc).lower()
-                    if "401" in msg:
+                    if "401" in msg and "bad credentials" not in msg:
                         err = "Oturum süresi dolmuş. Çıkış yapıp tekrar giriş yapın."
                     elif "502" in msg or "bad gateway" in msg:
-                        err = "Sunucu Hatası: Backend kapalı veya yanıt vermiyor."
+                        if "bad credentials" in msg:
+                            err = "GitHub Yetkilendirme Hatası: .env dosyasındaki GITHUB_TOKEN geçersiz veya süresi dolmuş."
+                        else:
+                            err = f"Sunucu Hatası / GitHub API Hatası: {exc}"
                     elif "timeout" in msg:
                         err = "Zaman Aşımı: Sprint tarih aralığını kısaltıp tekrar deneyin."
                     elif "404" in msg or "not found" in msg:

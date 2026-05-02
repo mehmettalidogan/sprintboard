@@ -35,7 +35,7 @@ def score_gauge(value: float, title: str, color: str) -> go.Figure:
                 axis=dict(
                     range=[0, 100],
                     tickwidth=0,
-                    tickcolor="transparent",
+                    tickcolor="rgba(0,0,0,0)",
                     tickfont=dict(color=C_TEXT_3, size=10, family=FONT_MONO),
                     nticks=6,
                 ),
@@ -59,7 +59,7 @@ def score_gauge(value: float, title: str, color: str) -> go.Figure:
             ),
         )
     )
-    fig.update_layout(**_BASE_LAYOUT, height=220, margin=dict(l=16, r=16, t=24, b=8))
+    fig.update_layout(**dict(_BASE_LAYOUT, height=220, margin=dict(l=16, r=16, t=24, b=8)))
     return fig
 
 

@@ -86,7 +86,12 @@ def analyze_sprint(
         headers=headers,
         timeout=TIMEOUT_LONG,
     )
-    r.raise_for_status()
+    if not r.ok:
+        try:
+            err_detail = r.json().get("detail", r.text)
+        except Exception:
+            err_detail = r.text
+        raise Exception(f"{r.status_code} - {err_detail}")
     return r.json()
 
 
