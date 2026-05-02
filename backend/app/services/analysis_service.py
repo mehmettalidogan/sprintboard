@@ -68,6 +68,9 @@ class AnalysisService:
         until_dt = _date_to_datetime(sprint.end_date, end_of_day=True)
         commits = await self._github.get_commits(repo_url, since_dt, until_dt)
 
+        # ── Step 1.5: Fetch contributor stats ──────────────────────────────────────
+        contributor_stats = await self._github.get_contributors(repo_url, since_dt, until_dt)
+
         # ── Step 2: Count working days ─────────────────────────────────────────
         total_working_days = await self._holiday.count_working_days(
             start=sprint.start_date,
@@ -78,11 +81,25 @@ class AnalysisService:
         # ── Step 3: Per-member breakdown ───────────────────────────────────────
         team = [m.lower() for m in sprint.team_members]
         member_stats = self._aggregate_member_stats(commits, team)
-        total_commits = sum(s["total_commits"] for s in member_stats.values())
+        # Merge contributor stats into member stats (since commits don't have details anymore)
+        for login, stats in member_stats.items():
+            author_data = contributor_stats.get(login) or contributor_stats.get(login.lower())
+            if author_data:
+                stats["total_additions"] = author_data.total_additions
+                stats["total_deletions"] = author_data.total_deletions
+            else:
+                stats["total_additions"] = 0
+                stats["total_deletions"] = 0
+
+        # İş Payı hesaplaması için: (Commit Sayısı * 50) + Eklenen Satır + Silinen Satır
+        def get_effort(s):
+            return (s["total_commits"] * 50) + s["total_additions"] + s["total_deletions"]
+            
+        total_effort = sum(get_effort(s) for s in member_stats.values())
 
         member_performance: List[MemberPerformance] = []
         for login, stats in member_stats.items():
-            share = stats["total_commits"] / total_commits if total_commits else 0.0
+            share = get_effort(stats) / total_effort if total_effort > 0 else 0.0
             member_performance.append(
                 MemberPerformance(
                     github_login=login,
@@ -221,26 +238,23 @@ class AnalysisService:
             }
             for login in team_logins
         }
-        # Also bucket untracked authors under their login
+        # Yalnızca forma girilen takım üyelerinin commitlerini say
         for c in commits:
             login = (c.author_login or c.author_name).lower()
-            if login not in agg:
-                agg[login] = {
-                    "total_commits": 0,
-                    "total_additions": 0,
-                    "total_deletions": 0,
-                    "active_dates": set(),
-                }
-            agg[login]["total_commits"] += 1
-            agg[login]["total_additions"] += c.additions
-            agg[login]["total_deletions"] += c.deletions
-            agg[login]["active_dates"].add(c.committed_at.date())
+            # Eğer commit atan kişi takım listesinde yoksa yoksay (veya case-insensitive eşleştir)
+            matched_login = next((t for t in team_logins if t == login or t in login), None)
+            if not matched_login:
+                continue
 
-        # Resolve set → count for serialisation
+            agg[matched_login]["total_commits"] += 1
+            agg[matched_login]["total_additions"] += c.additions
+            agg[matched_login]["total_deletions"] += c.deletions
+            agg[matched_login]["active_dates"].add(c.committed_at.date())
+
+        # Resolve set → count for serialisation (0 commit olanlar da kalsın)
         return {
             login: {**data, "active_days": len(data["active_dates"])}
             for login, data in agg.items()
-            if data["total_commits"] > 0
         }
 
     @staticmethod

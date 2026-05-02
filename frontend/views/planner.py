@@ -60,6 +60,14 @@ with st.form("planner_form"):
             placeholder="Örn: Kullanici1, https://github.com/Kullanici2, Kullanici3"
         )
         
+    cv_file = st.file_uploader("Özgeçmiş (CV) Yükle (İsteğe Bağlı, PDF)", type=["pdf"])
+    
+    cv_text_input = st.text_area(
+        "Veya Manuel Olarak Yetenekleri Girin (İsteğe Bağlı)",
+        height=80,
+        placeholder="Örn: Kullanici1: 5 yıllık Frontend (React) tecrübesi var."
+    )
+        
     submit = st.form_submit_button("Planı Oluştur 🚀", type="primary", use_container_width=True)
     
 if submit:
@@ -70,13 +78,29 @@ if submit:
         if not members:
             st.error("Geçerli bir takım üyesi bulunamadı.")
         else:
+            # 1. Metin birleştirme: PDF ve Manuel girdiler
+            cv_content = ""
+            if cv_file is not None:
+                import PyPDF2
+                try:
+                    pdf_reader = PyPDF2.PdfReader(cv_file)
+                    pdf_text = "\n".join([page.extract_text() or "" for page in pdf_reader.pages])
+                    if pdf_text.strip():
+                        cv_content += f"PDF'ten Alınan CV Özeti:\n{pdf_text}\n"
+                except Exception as e:
+                    st.error(f"PDF okunurken hata oluştu: {str(e)}")
+            
+            if cv_text_input.strip():
+                cv_content += f"Manuel Eklenen Yetenekler:\n{cv_text_input}\n"
+                
             with st.spinner("GitHub geçmişleri inceleniyor ve Gemini ile plan oluşturuluyor... (Bu işlem 15-30 sn sürebilir)"):
                 try:
                     result = generate_sprint_plan(
                         project_idea=project_idea,
                         sprint_count=sprint_count,
                         team_members=members,
-                        token=st.session_state.token
+                        token=st.session_state.token,
+                        cv_text=cv_content.strip()
                     )
                     st.session_state.planner_result = result
                     st.success("Plan başarıyla oluşturuldu!")

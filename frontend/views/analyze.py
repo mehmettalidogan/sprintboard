@@ -29,16 +29,18 @@ if result is None:
     with col_form:
         github_url = st.text_input(
             "GitHub Repo URL",
+            value=st.session_state.get("form_url", ""),
             placeholder="https://github.com/kullanici/repo",
             help="Herkese açık bir GitHub deposunun tam adresi",
         )
         col_d1, col_d2 = st.columns(2)
         with col_d1:
-            start_date = st.date_input("Sprint Başlangıç", value=date.today() - timedelta(days=14), format="DD.MM.YYYY")
+            start_date = st.date_input("Sprint Başlangıç", value=st.session_state.get("form_start", date.today() - timedelta(days=14)), format="DD.MM.YYYY")
         with col_d2:
-            end_date = st.date_input("Sprint Bitiş", value=date.today(), format="DD.MM.YYYY")
+            end_date = st.date_input("Sprint Bitiş", value=st.session_state.get("form_end", date.today()), format="DD.MM.YYYY")
         members_raw = st.text_area(
             "Takım Üyeleri",
+            value=st.session_state.get("form_members", ""),
             placeholder="alice\nbob\ncharlie\n\nHer satıra bir GitHub kullanıcı adı",
             height=130,
         )
@@ -76,7 +78,12 @@ if result is None:
     # ── Analiz tetikleyici ─────────────────────────────────────────────────────
     if run_btn:
         st.session_state.error = None
-        members = [m.strip() for m in members_raw.splitlines() if m.strip()]
+        st.session_state.form_url = github_url
+        st.session_state.form_start = start_date
+        st.session_state.form_end = end_date
+        st.session_state.form_members = members_raw
+        
+        members = [m.strip().lstrip('@') for m in members_raw.splitlines() if m.strip()]
         errors = []
         if not github_url.startswith("https://github.com/"):
             errors.append("Geçersiz URL: 'https://github.com/kullanici/repo' formatında girin.")
@@ -150,7 +157,7 @@ with col_title:
     )
 with col_btn:
     st.html("<div style='height:1rem'></div>")
-    if st.button("Yeni Analiz", use_container_width=True):
+    if st.button("Düzenle", use_container_width=True):
         st.session_state.result = None
         st.session_state.error  = None
         st.rerun()
@@ -203,10 +210,10 @@ st.html(f"<hr style='border:none;border-top:1px solid {C_BORDER};margin:1.5rem 0
 # ── Grafikler ─────────────────────────────────────────────────────────────────
 col_ch1, col_ch2 = st.columns([1, 2])
 with col_ch1:
-    section_header("Commit Da\u011f\u0131l\u0131m\u0131", "Tak\u0131m \u00fcyesi baz\u0131nda i\u015f y\u00fck\u00fc")
+    section_header("İş Payı Dağılımı", "Takım üyesi bazında gerçek iş yükü")
     st.plotly_chart(workload_pie(r["member_performance"]), use_container_width=True, config={"displayModeBar": False})
 with col_ch2:
-    section_header("\u00dcye K\u0131yaslaması", "Commit \u00b7 Ekleme (+) \u00b7 Silme (-)")
+    section_header("Üye Kıyaslaması", "Commit · Ekleme (+) · Silme (-)")
     st.plotly_chart(member_bar(r["member_performance"]), use_container_width=True, config={"displayModeBar": False})
 
 st.html("<div style='height:0.5rem'></div>")
@@ -222,8 +229,8 @@ df = df.rename(columns={
     "total_additions": "+ Sat\u0131r", "total_deletions": "- Sat\u0131r",
     "active_days": "Aktif G\u00fcn", "workload_share": "\u0130\u015f Pay\u0131",
 })
-df["\u0130\u015f Pay\u0131"] = df["\u0130\u015f Pay\u0131"].apply(lambda x: f"{x * 100:.1f}%")
-df = df.sort_values("Commit", ascending=False)
+df["İş Payı"] = df["İş Payı"].apply(lambda x: f"{x * 100:.1f}%")
+df = df.sort_values(["+ Satır", "Commit"], ascending=[False, False])
 st.dataframe(df, use_container_width=True, hide_index=True, column_config={
     "GitHub": st.column_config.TextColumn(width="medium"),
     "Commit": st.column_config.NumberColumn(format="%d"),

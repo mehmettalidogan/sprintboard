@@ -121,6 +121,7 @@ def generate_sprint_plan(
     sprint_count: int,
     team_members: list[str],
     token: str,
+    cv_text: str = None
 ) -> dict:
     """POST /api/v1/planner/generate — Gemini destekli sprint planlaması."""
     payload = {
@@ -128,6 +129,9 @@ def generate_sprint_plan(
         "sprint_count": sprint_count,
         "team_members": team_members,
     }
+    if cv_text:
+        payload["cv_text"] = cv_text
+        
     r = requests.post(
         f"{BASE_URL}/api/v1/planner/generate",
         json=payload,

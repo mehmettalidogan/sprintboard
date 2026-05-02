@@ -64,15 +64,14 @@ def score_gauge(value: float, title: str, color: str) -> go.Figure:
 
 
 def workload_pie(member_performance: list[dict]) -> go.Figure:
-    """Takım üyelerinin commit payı pasta grafiği."""
+    """Takım üyelerinin iş payı pasta grafiği."""
     labels = [m["github_login"] for m in member_performance]
-    values = [m["total_commits"] for m in member_performance]
+    values = [m["workload_share"] for m in member_performance]
     _palette = [
         C_ACCENT, C_CYAN, C_SUCCESS, C_WARNING,
         "#8B5CF6", "#EC4899", "#F97316", "#14B8A6",
         "#F43F5E", "#A78BFA", "#FBBF24", "#34D399",
     ]
-    # Yeterli renk yoksa paleti döngüsel olarak genişlet
     colors = [_palette[i % len(_palette)] for i in range(len(labels))]
 
     fig = go.Figure(
@@ -82,7 +81,7 @@ def workload_pie(member_performance: list[dict]) -> go.Figure:
             hole=0.55,
             marker=dict(colors=colors, line=dict(color="#FFFFFF", width=2)),
             textfont=dict(family=FONT_SANS, size=12),
-            hovertemplate="<b>%{label}</b><br>%{value} commit — %{percent}<extra></extra>",
+            hovertemplate="<b>%{label}</b><br>İş Payı: %{percent}<extra></extra>",
         )
     )
     fig.update_layout(
@@ -97,7 +96,7 @@ def workload_pie(member_performance: list[dict]) -> go.Figure:
         ),
         annotations=[
             dict(
-                text="Commit<br>Dağılımı",
+                text="İş Payı<br>Dağılımı",
                 x=0.5, y=0.5,
                 font=dict(size=12, color=C_TEXT_2, family=FONT_SANS),
                 showarrow=False,
@@ -107,11 +106,20 @@ def workload_pie(member_performance: list[dict]) -> go.Figure:
     return fig
 
 
+from plotly.subplots import make_subplots
+
 def member_bar(member_performance: list[dict]) -> go.Figure:
     """Üye başına commit / ekleme / silme karşılaştırması."""
-    df = pd.DataFrame(member_performance).sort_values("total_commits", ascending=True)
+    df = pd.DataFrame(member_performance).sort_values("total_additions", ascending=True)
 
-    fig = go.Figure()
+    fig = make_subplots(
+        rows=1, cols=2, 
+        shared_yaxes=True, 
+        horizontal_spacing=0.05,
+        column_widths=[0.3, 0.7],
+        subplot_titles=("Commit Sayısı", "Satır Katkısı (+/-)")
+    )
+
     fig.add_trace(go.Bar(
         y=df["github_login"],
         x=df["total_commits"],
@@ -119,7 +127,8 @@ def member_bar(member_performance: list[dict]) -> go.Figure:
         orientation="h",
         marker=dict(color=C_ACCENT, line=dict(width=0)),
         hovertemplate="<b>%{y}</b><br>%{x} commit<extra></extra>",
-    ))
+    ), row=1, col=1)
+
     fig.add_trace(go.Bar(
         y=df["github_login"],
         x=df["total_additions"],
@@ -127,7 +136,7 @@ def member_bar(member_performance: list[dict]) -> go.Figure:
         orientation="h",
         marker=dict(color=C_SUCCESS, line=dict(width=0)),
         hovertemplate="<b>%{y}</b><br>+%{x} satır<extra></extra>",
-    ))
+    ), row=1, col=2)
     fig.add_trace(go.Bar(
         y=df["github_login"],
         x=df["total_deletions"],
@@ -135,28 +144,25 @@ def member_bar(member_performance: list[dict]) -> go.Figure:
         orientation="h",
         marker=dict(color=C_DANGER, line=dict(width=0)),
         hovertemplate="<b>%{y}</b><br>-%{x} satır<extra></extra>",
-    ))
+    ), row=1, col=2)
 
     fig.update_layout(
         **_BASE_LAYOUT,
         barmode="group",
         height=max(220, len(df) * 70),
-        xaxis=dict(
-            showgrid=True,
-            gridcolor=C_BORDER,
-            zeroline=False,
-            tickfont=dict(family=FONT_MONO, size=11, color=C_TEXT_2),
-        ),
-        yaxis=dict(
-            showgrid=False,
-            tickfont=dict(family=FONT_SANS, size=12, color=C_PRIMARY),
-        ),
         legend=dict(
             orientation="h",
-            x=0, y=1.08,
+            x=0, y=1.15,
             font=dict(family=FONT_SANS, size=12),
         ),
     )
+    fig.update_xaxes(showgrid=True, gridcolor=C_BORDER, zeroline=False, tickfont=dict(family=FONT_MONO, size=11, color=C_TEXT_2))
+    fig.update_yaxes(showgrid=False, tickfont=dict(family=FONT_SANS, size=12, color=C_PRIMARY))
+    
+    # Subplot başlıkları için font ayarı
+    for annotation in fig['layout']['annotations']:
+        annotation['font'] = dict(size=12, color=C_TEXT_2, family=FONT_SANS)
+        
     return fig
 
 

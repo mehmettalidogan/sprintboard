@@ -130,6 +130,8 @@ class GitHubService:
     async def get_contributors(
         self,
         repo_url: str,
+        since: Optional[datetime] = None,
+        until: Optional[datetime] = None,
     ) -> Dict[str, AuthorStats]:
         """
         Fetch aggregated contributor statistics from GitHub.
@@ -143,21 +145,25 @@ class GitHubService:
         self._ensure_client()
         owner, repo = self._parse_repo_url(repo_url)
 
-        for _ in range(3):
-            response = await self._client.get(  # type: ignore[union-attr]
+        for attempt in range(5):
+            response = await self._client.get(
                 self._STATS_PATH.format(owner=owner, repo=repo),
             )
             if response.status_code == 202:
                 # Stats are being computed — short sleep then retry
                 import asyncio
-                await asyncio.sleep(2)
+                await asyncio.sleep(4)
                 continue
+            if response.status_code == 200:
+                data = response.json()
+                return self._map_contributor_stats(data, since, until)
+            if response.status_code == 204: # Boş repo
+                return {}
             self._raise_for_status(response)
-            return self._map_contributor_stats(response.json())
 
-        raise GitHubServiceError(
-            "GitHub contributor stats are still being computed. Please retry shortly."
-        )
+        # 5 denemede de hesaplanamadıysa hata fırlatmak yerine boş verilerle devam et
+        print(f"Warning: GitHub stats still computing for {repo_url} after retries.")
+        return {}
 
     async def get_analysis(
         self,
@@ -250,18 +256,34 @@ class GitHubService:
         )
 
     @staticmethod
-    def _map_contributor_stats(data: List[Dict[str, Any]]) -> Dict[str, AuthorStats]:
+    def _map_contributor_stats(
+        data: List[Dict[str, Any]],
+        since: Optional[datetime] = None,
+        until: Optional[datetime] = None,
+    ) -> Dict[str, AuthorStats]:
         """Map raw contributor stats from GitHub to :class:`AuthorStats` objects."""
+        from datetime import timezone, timedelta
         result: Dict[str, AuthorStats] = {}
         for entry in data:
             author = entry.get("author") or {}
             login = author.get("login", "unknown")
             weeks = entry.get("weeks", [])
+            
+            valid_weeks = []
+            for w in weeks:
+                week_dt = datetime.fromtimestamp(w.get("w", 0), tz=timezone.utc)
+                # Filter out weeks that are completely outside our range
+                if since and week_dt + timedelta(days=7) < since:
+                    continue
+                if until and week_dt > until:
+                    continue
+                valid_weeks.append(w)
+                
             result[login] = AuthorStats(
                 login=login,
-                total_commits=entry.get("total", 0),
-                total_additions=sum(w.get("a", 0) for w in weeks),
-                total_deletions=sum(w.get("d", 0) for w in weeks),
+                total_commits=sum(w.get("c", 0) for w in valid_weeks),
+                total_additions=sum(w.get("a", 0) for w in valid_weeks),
+                total_deletions=sum(w.get("d", 0) for w in valid_weeks),
             )
         return result
 

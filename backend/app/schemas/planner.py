@@ -11,6 +11,7 @@ class PlanRequest(BaseModel):
     project_idea: str
     sprint_count: int
     team_members: List[str]
+    cv_text: Optional[str] = None
 
 
 class TaskAssignment(BaseModel):

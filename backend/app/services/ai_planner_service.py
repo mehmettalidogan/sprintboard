@@ -31,13 +31,17 @@ class AiPlannerService:
             [f"--- Profile for {username} ---\n{profile}" for username, profile in member_profiles.items()]
         )
 
+        cv_text_block = ""
+        if request.cv_text and request.cv_text.strip():
+            cv_text_block = f"\nCUSTOM CV / QUALIFICATIONS (Prioritize this over GitHub data!):\n{request.cv_text}\n"
+
         prompt = f"""
         You are an expert Agile Scrum Master and Technical Lead.
         Your task is to break down a project into exactly {request.sprint_count} sprints.
         
         PROJECT IDEA:
         {request.project_idea}
-        
+        {cv_text_block}
         TEAM MEMBERS & GITHUB PROFILES:
         {profiles_text}
         
